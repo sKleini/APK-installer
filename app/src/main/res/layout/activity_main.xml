@@ -1,77 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/mainLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:id="@+id/mainLayout"
     tools:context=".MainActivity">
 
+    <ListView
+        android:id="@+id/dynamic_apk_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-    <Button
-        android:id="@+id/buttonAPK_lock_master"
-        android:layout_width="180dp"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="17dp"
-        android:background="@color/colorPrimaryDark"
-        android:minHeight="40dp"
-        android:text="Download Lock - master"
-        android:textAllCaps="false"
-        android:textColor="@color/colorWhite"
-        app:layout_constraintBottom_toTopOf="@+id/buttonAPK_bxLock_master"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0" />
-
-    <Button
-        android:id="@+id/buttonAPK_bxLock_develop"
-        android:layout_width="180dp"
-        android:layout_height="wrap_content"
-        android:background="@color/colorPrimaryDark"
-        android:minHeight="40dp"
-        android:text="Download bxLock - develop"
-        android:textAllCaps="false"
-        android:textColor="@color/colorWhite"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.6" />
-
-    <Button
-        android:id="@+id/buttonAPK_lock_develop"
-        android:layout_width="180dp"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="17dp"
-        android:background="@color/colorPrimaryDark"
-        android:minHeight="40dp"
-        android:text="Download Lock - develop"
-        android:textAllCaps="false"
-        android:textColor="@color/colorWhite"
-        app:layout_constraintBottom_toTopOf="@+id/buttonAPK_bxLock_develop"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0" />
-
-    <Button
-        android:id="@+id/buttonAPK_bxLock_master"
-        android:layout_width="180dp"
-        android:layout_height="wrap_content"
-        android:background="@color/colorPrimaryDark"
-        android:minHeight="40dp"
-        android:text="Download bxLock - master"
-        android:textAllCaps="false"
-        android:textColor="@color/colorWhite"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.4" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</RelativeLayout>
