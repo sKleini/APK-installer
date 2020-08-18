@@ -44,10 +44,6 @@ class DownloadController(private val context: Context, private val url: String) 
         showInstallOption(destination, uri)
         // Enqueue a new download and same the referenceId
         downloadManager.enqueue(request)
-        Toast.makeText(context, context.getString(R.string.downloading), Toast.LENGTH_LONG)
-            .show()
-
-
     }
 
     private fun showInstallOption(
