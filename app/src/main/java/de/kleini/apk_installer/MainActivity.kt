@@ -141,8 +141,6 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
             if (apkUrl != null) {
                 downloadController = DownloadController(this, apkUrl)
                 downloadController.enqueueDownload()
-                Toast.makeText(applicationContext, "Download gestartet...", Toast.LENGTH_LONG)
-                    .show()
             }
         } else {
             // Permission is missing and must be requested.
