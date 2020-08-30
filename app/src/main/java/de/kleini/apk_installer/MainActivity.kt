@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
+import android.view.ViewManager
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.ListView
@@ -45,6 +46,10 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
 
                     runOnUiThread {
                         listView = findViewById(R.id.dynamic_apk_list)
+                        loadingSpinner.animate().alpha(0f).withEndAction {
+                            loadingSpinner.visibility = View.INVISIBLE
+                            (loadingSpinner.parent as ViewManager).removeView(loadingSpinner)
+                        }.start()
 
                         arrayAdapter = ArrayAdapter(
                             applicationContext,
@@ -68,7 +73,16 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
             .url(url)
             .build()
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Unexpected code $response")
+            if (!response.isSuccessful){
+                runOnUiThread {
+                    Toast.makeText(
+                        applicationContext,
+                        "Unexpected code $response",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                throw IOException("Unexpected code $response")
+            }
 
             val listOfReposType: Type = Types.newParameterizedType(
                 List::class.java,
