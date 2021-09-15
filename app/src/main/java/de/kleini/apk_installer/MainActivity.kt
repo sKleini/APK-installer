@@ -136,7 +136,7 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
                 // start downloading
                 Toast.makeText(
                     applicationContext,
-                    "PERMISSION_GRANTED ready to download. Please click again!",
+                    "PERMISSION_GRANTED ready to download. Please click again!!",
                     Toast.LENGTH_SHORT
                 ).show()
             } else {
