@@ -78,4 +78,4 @@ jobs:
         
         git add .
         git diff-index --quiet HEAD || git commit --allow-empty --message "Update from https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA"
-        git -c credential.helper= push "https://oauth2:${API_TOKEN_GITHUB}@github.com/$OWNER/APK-releases.git" master
+        git -c credential.helper= push "https://x-access-token:${API_TOKEN_GITHUB}@github.com/$OWNER/APK-releases.git" master
