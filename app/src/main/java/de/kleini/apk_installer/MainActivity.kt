@@ -3,33 +3,36 @@ package de.kleini.apk_installer
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.view.View
-import android.view.ViewManager
-import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.ListView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import com.squareup.moshi.*
-import kotlinx.android.synthetic.main.activity_main.*
+import de.kleini.apk_installer.databinding.ActivityMainBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.IOException
 import java.lang.reflect.Type
 
 
-class MainActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
-    
+class MainActivity : AppCompatActivity() {
+
     companion object {
+        private const val TAG = "MainActivity"
         const val PERMISSION_REQUEST_STORAGE = 0
     }
 
+    private lateinit var binding: ActivityMainBinding
     lateinit var downloadController: DownloadController
-    private var listView: ListView? = null
     private var arrayAdapter: ArrayAdapter<String>? = null
     private var itemMap = mutableMapOf<String, String>()
-    private var startRepoUrl = "https://api.github.com/repos/sKleini/APK-releases/contents"
+    private var pendingDownloadUrl: String? = null
+    private val startRepoUrl = "https://api.github.com/repos/sKleini/APK-releases/contents"
 
     private val client = OkHttpClient()
     private val moshi = Moshi.Builder().build()
@@ -37,72 +40,69 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        val thread = Thread(Runnable {
-            try {
-                synchronized(this) {
-                    runGetRequest(startRepoUrl)
-
-                    runOnUiThread {
-                        listView = findViewById(R.id.dynamic_apk_list)
-                        loadingSpinner.animate().alpha(0f).withEndAction {
-                            loadingSpinner.visibility = View.INVISIBLE
-                            (loadingSpinner.parent as ViewManager).removeView(loadingSpinner)
-                        }.start()
-
-                        arrayAdapter = ArrayAdapter(
-                            applicationContext,
-                            android.R.layout.simple_list_item_1,
-                            itemMap.keys.toList()
-                        )
-                        listView?.adapter = arrayAdapter
-                        listView?.choiceMode = ListView.CHOICE_MODE_SINGLE
-                        listView?.onItemClickListener = this
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        })
-        thread.start()
+        loadApkList()
     }
 
-    private fun runGetRequest(url: String) {
-        val request = Request.Builder()
-            .url(url)
-            .build()
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful){
-                runOnUiThread {
-                    Toast.makeText(
-                        applicationContext,
-                        "Unexpected code $response",
-                        Toast.LENGTH_LONG
-                    ).show()
+    private fun loadApkList() {
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    fetchItems(startRepoUrl)
                 }
-                throw IOException("Unexpected code $response")
+
+                binding.loadingSpinner.animate().alpha(0f).withEndAction {
+                    binding.loadingSpinner.visibility = View.GONE
+                }.start()
+
+                arrayAdapter = ArrayAdapter(
+                    this@MainActivity,
+                    android.R.layout.simple_list_item_1,
+                    itemMap.keys.toList()
+                )
+                binding.dynamicApkList.adapter = arrayAdapter
+                binding.dynamicApkList.choiceMode = android.widget.ListView.CHOICE_MODE_SINGLE
+                binding.dynamicApkList.setOnItemClickListener { parent, _, position, _ ->
+                    val itemName = parent.getItemAtPosition(position) as String
+                    val url = itemMap[itemName]
+                    checkStoragePermission(url)
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load APK list", e)
+                Toast.makeText(this@MainActivity, "Fehler beim Laden der Liste: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun fetchItems(url: String, depth: Int = 0) {
+        if (depth > 5) {
+            Log.w(TAG, "Max recursion depth reached for URL: $url")
+            return
+        }
+
+        val request = Request.Builder().url(url).build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw Exception("HTTP ${response.code}: $url")
             }
 
-            val listOfReposType: Type = Types.newParameterizedType(
-                List::class.java,
-                Repo::class.java
-            )
+            val body = response.body ?: throw Exception("Leere Antwort von: $url")
 
-            val reposJsonAdapter: JsonAdapter<List<Repo>> =
-                moshi.adapter(listOfReposType)
+            val listOfReposType: Type = Types.newParameterizedType(List::class.java, Repo::class.java)
+            val reposJsonAdapter: JsonAdapter<List<Repo>> = moshi.adapter(listOfReposType)
+            val repos = reposJsonAdapter.fromJson(body.source()) ?: return
 
-            val repos = reposJsonAdapter.fromJson(response.body!!.source())
-
-            if (repos != null) {
-                for (repo in repos) {
-
-                    if (repo.type.equals("dir")) {
-                        runGetRequest(repo.url)
-                    } else if (repo.type.equals("file")) {
-                        if (repo.download_url != null) {
-                            itemMap[repo.path] = repo.download_url
-                            println(repo.download_url)
+            for (repo in repos) {
+                when (repo.type) {
+                    "dir" -> fetchItems(repo.url, depth + 1)
+                    "file" -> {
+                        val downloadUrl = repo.download_url
+                        if (downloadUrl != null) {
+                            itemMap[repo.path] = downloadUrl
+                            Log.d(TAG, "APK gefunden: ${repo.path}")
                         }
                     }
                 }
@@ -112,61 +112,54 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
 
     @JsonClass(generateAdapter = true)
     data class Repo(
-        @Json(name = "name") val name: String
-        , @Json(name = "path") val path: String
-        , @Json(name = "type") val type: String
-        , @Json(name = "url") val url: String
-        , @Json(name = "download_url") val download_url: String? = ""
+        @Json(name = "name") val name: String,
+        @Json(name = "path") val path: String,
+        @Json(name = "type") val type: String,
+        @Json(name = "url") val url: String,
+        @Json(name = "download_url") val download_url: String? = null
     )
-
-    override fun onItemClick(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-        val items: String = p0?.getItemAtPosition(p2) as String
-        Toast.makeText(applicationContext, itemMap[items], Toast.LENGTH_LONG).show()
-        checkStoragePermission(itemMap[items])
-    }
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSION_REQUEST_STORAGE) {
-            // Request for camera permission.
-            if (grantResults.size == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // start downloading
-                Toast.makeText(
-                    applicationContext,
-                    "PERMISSION_GRANTED ready to download. Please click again!!",
-                    Toast.LENGTH_SHORT
-                ).show()
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                val url = pendingDownloadUrl
+                pendingDownloadUrl = null
+                if (url != null) {
+                    startDownload(url)
+                }
             } else {
-                // Permission request was denied.
-                mainLayout.showSnackbar(R.string.storage_permission_denied, Snackbar.LENGTH_SHORT)
+                binding.root.showSnackbar(R.string.storage_permission_denied, Snackbar.LENGTH_SHORT)
             }
         }
     }
 
     private fun checkStoragePermission(apkUrl: String?) {
-        // Check if the storage permission has been granted
+        if (apkUrl == null) return
+
         if (checkSelfPermissionCompat(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
             PackageManager.PERMISSION_GRANTED
         ) {
-            // start downloading
-            if (apkUrl != null) {
-                downloadController = DownloadController(this, apkUrl)
-                downloadController.enqueueDownload()
-            }
+            startDownload(apkUrl)
         } else {
-            // Permission is missing and must be requested.
+            pendingDownloadUrl = apkUrl
             requestStoragePermission()
         }
     }
 
+    private fun startDownload(apkUrl: String) {
+        Log.d(TAG, "Download gestartet: $apkUrl")
+        downloadController = DownloadController(this, apkUrl)
+        downloadController.enqueueDownload()
+    }
+
     private fun requestStoragePermission() {
-
         if (shouldShowRequestPermissionRationaleCompat(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-
-            mainLayout.showSnackbar(
+            binding.root.showSnackbar(
                 R.string.storage_access_required,
                 Snackbar.LENGTH_INDEFINITE, R.string.ok
             ) {
@@ -175,7 +168,6 @@ class MainActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
                     PERMISSION_REQUEST_STORAGE
                 )
             }
-
         } else {
             requestPermissionsCompat(
                 arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
