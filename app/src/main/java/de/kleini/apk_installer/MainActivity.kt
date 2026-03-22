@@ -100,7 +100,7 @@ class MainActivity : AppCompatActivity() {
                     "dir" -> fetchItems(repo.url, depth + 1)
                     "file" -> {
                         val downloadUrl = repo.download_url
-                        if (downloadUrl != null) {
+                        if (downloadUrl != null && repo.name.endsWith(".apk", ignoreCase = true)) {
                             itemMap[repo.path] = downloadUrl
                             Log.d(TAG, "APK gefunden: ${repo.path}")
                         }
