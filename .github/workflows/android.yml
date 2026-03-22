@@ -47,6 +47,8 @@ jobs:
         git config --global user.email ${{ secrets.ACTIONS_EMAIL }}
         git config --global pull.ff only
     - name: Rename, Add, Commit and Push APK
+      env:
+        API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
       run: |
         APP=$(echo ${GITHUB_REPOSITORY} | cut -d '/' -f2)
         OWNER=$(echo ${GITHUB_REPOSITORY} | cut -d '/' -f1)
@@ -64,7 +66,7 @@ jobs:
         mkdir -p $CLONEDIR
         rm -rf $CLONEDIR/*
 
-        git clone "https://${{ secrets.API_TOKEN_GITHUB }}@github.com/$OWNER/APK-releases" "$CLONEDIR"
+        git clone "https://${API_TOKEN_GITHUB}@github.com/$OWNER/APK-releases" "$CLONEDIR"
 
         mkdir -p $CLONEDIR/$APP$BRANCH
         rm -rf $CLONEDIR/$APP$BRANCH/*
@@ -76,4 +78,4 @@ jobs:
         
         git add .
         git diff-index --quiet HEAD || git commit --allow-empty --message "Update from https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA"
-        git push origin master
+        git push "https://${API_TOKEN_GITHUB}@github.com/$OWNER/APK-releases" master
