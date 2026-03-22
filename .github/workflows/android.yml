@@ -31,6 +31,8 @@ jobs:
       run: chmod +x ./gradlew
     - name: Build with Gradle
       run: ./gradlew assemble
+    - name: Install build-tools 29.0.3
+      run: $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "build-tools;29.0.3"
     - name: Sign APK
       uses: r0adkll/sign-android-release@v1
       with:
@@ -39,7 +41,6 @@ jobs:
         alias: ${{ secrets.ALIAS }}
         keyStorePassword: ${{ secrets.KEYSTOREPASSWORD }}
         keyPassword: ${{ secrets.KEYPASSWORD }}
-        buildToolsVersion: '33.0.2'
     - name: Setup git
       run: |
         git config --global user.name ${{ secrets.ACTIONS_USERNAME }}
